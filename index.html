@@ -1,0 +1,712 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self'; form-action 'none'; base-uri 'none'; object-src 'none'">
+<meta name="referrer" content="no-referrer">
+<title>自費サービス記録帳</title>
+<meta name="description" content="自費サービスの利用時間・内容・利用者の手書きサインをスマホに記録する無料アプリ。記録はそのスマホの中だけに保存されます。">
+<meta name="theme-color" content="#2C4A7E">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="自費記録">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<style>
+:root{
+  color-scheme:light dark;
+  --ground:#EEF1F4; --surface:#FFFFFF; --ink:#1B2433; --muted:#5E6878; --line:#D5DBE3;
+  --accent:#2C4A7E; --accent-ink:#FFFFFF; --accent-soft:#E2E9F4;
+  --ok:#2E7D5B; --ok-soft:#DDF0E6; --warn:#A8620B; --warn-soft:#FBEBD3; --danger:#B23A3A;
+  --paper:#FFFEFA; --shadow:0 1px 2px rgba(27,36,51,.06),0 4px 16px rgba(27,36,51,.06);
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --ground:#12161D; --surface:#1B212B; --ink:#E6EAF0; --muted:#9AA3B2; --line:#2E3643;
+    --accent:#8FAEE3; --accent-ink:#0E1522; --accent-soft:#233149;
+    --ok:#7FCFA8; --ok-soft:#1D3329; --warn:#E9B46A; --warn-soft:#3A2C17; --danger:#EE8B8B;
+    --shadow:0 1px 2px rgba(0,0,0,.3);
+  }
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:"Hiragino Sans","Hiragino Kaku Gothic ProN","BIZ UDPGothic","Yu Gothic UI","Noto Sans JP",Meiryo,system-ui,sans-serif;font-size:16px;line-height:1.6;-webkit-tap-highlight-color:transparent;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+[hidden]{display:none!important}
+img{max-width:100%}
+.wrap{max-width:640px;margin:0 auto;padding-inline:16px;padding-block:0 96px}
+h1,h2{font-weight:700;margin:0;text-wrap:balance}
+.num{font-variant-numeric:tabular-nums}
+
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--ground);padding-block:12px 8px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.top h1{font-size:clamp(15px,4.4vw,19px);letter-spacing:.01em;line-height:1.3;white-space:nowrap}
+.tabs{display:flex;gap:2px;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:3px;flex-shrink:0}
+.tabs button{border:0;background:transparent;color:var(--muted);font:inherit;font-size:14px;font-weight:700;padding:6px 12px;border-radius:999px;cursor:pointer}
+.tabs button[aria-selected="true"]{background:var(--accent);color:var(--accent-ink)}
+
+.banner{font-size:14px;border-radius:12px;padding:12px 14px;margin-block:4px 10px;background:var(--accent-soft);color:var(--ink);display:grid;gap:8px}
+.banner.warn{background:var(--warn-soft)}
+.banner b{color:var(--accent)}
+.banner.warn b{color:var(--warn)}
+.banner .row{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+
+.section{background:var(--surface);border-radius:14px;box-shadow:var(--shadow);padding:16px;margin-block:12px;display:grid;gap:14px}
+.section h2{font-size:15px;color:var(--muted);letter-spacing:.06em}
+label.f{display:grid;gap:4px;font-size:13px;font-weight:700;color:var(--muted)}
+input[type=text],input[type=date],input[type=time],input[type=month],input[type=number],select,textarea{font:inherit;font-size:17px;color:var(--ink);background:var(--ground);border:1px solid var(--line);border-radius:10px;padding:10px 12px;width:100%;min-height:48px}
+textarea{min-height:96px;resize:vertical}
+input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible,.chip:focus-within{outline:3px solid var(--accent);outline-offset:1px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:360px){.row2{grid-template-columns:1fr}}
+
+.timebox{display:grid;grid-template-columns:1fr auto 1fr;align-items:end;gap:8px}
+.timebox .tilde{padding-bottom:12px;color:var(--muted);font-size:20px}
+.tcol{display:grid;gap:6px}
+.nowbtn{font:inherit;font-size:13px;font-weight:700;border:1px solid var(--accent);color:var(--accent);background:transparent;border-radius:8px;padding:6px;cursor:pointer}
+.dur{display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--accent-soft);border-radius:10px;padding:10px 14px}
+.dur span{font-size:13px;color:var(--muted);font-weight:700}
+.dur b{font-size:22px;color:var(--accent)}
+.dur.fee{background:transparent;border:1px solid var(--line)}
+.dur.fee b{color:var(--ink);display:block;text-align:right}
+.dur.fee em{font-style:normal;font-size:12px;color:var(--muted);display:block;text-align:right}
+
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{position:relative}
+.chip input{position:absolute;opacity:0;inset:0;width:100%;height:100%;margin:0;cursor:pointer}
+.chip span{display:inline-block;padding:8px 14px;border-radius:999px;border:1px solid var(--line);background:var(--ground);font-size:15px}
+.chip input:checked + span{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:700}
+
+.sigpad{position:relative;background:var(--paper);border:2px dashed #B9C2CF;border-radius:12px;aspect-ratio:16/7;max-width:100%;touch-action:none;overflow:hidden}
+.sigpad canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:crosshair}
+.sigpad .base{position:absolute;left:8%;right:8%;bottom:26%;border-bottom:1px solid #C9D0DA;pointer-events:none}
+.sigpad .x{position:absolute;left:4%;bottom:24%;color:#A6AFBC;font-size:20px;pointer-events:none}
+.sigpad .hint{position:absolute;inset:0;display:grid;place-items:center;color:#8C95A3;font-size:15px;pointer-events:none}
+.sigtools{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+.sigimg{background:var(--paper);border-radius:10px;border:1px solid var(--line);padding:6px}
+.sigimg img{display:block;width:100%;height:auto}
+
+.btn{font:inherit;font-weight:700;font-size:16px;border-radius:12px;padding:12px 16px;min-height:48px;cursor:pointer;border:1px solid var(--line);background:var(--surface);color:var(--ink)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.ghost{background:transparent}
+.btn.small{font-size:14px;min-height:36px;padding:6px 12px;border-radius:9px}
+.btn.danger{color:var(--danger);border-color:transparent;background:transparent}
+.btn.wide{width:100%}
+.btn:disabled{opacity:.45;cursor:default}
+.actions{display:grid;grid-template-columns:1fr 1.4fr;gap:10px;margin-block:16px 10px}
+
+.filters{display:grid;grid-template-columns:1.3fr 1fr;gap:8px;margin-block:4px 8px}
+.filters select,.filters input{font-size:15px;min-height:42px;padding:6px 10px}
+.summary{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:13px;color:var(--muted);margin-block:4px 8px;flex-wrap:wrap}
+.daygroup{margin-block:14px 6px;font-size:13px;font-weight:700;color:var(--muted);letter-spacing:.04em}
+.rec{display:grid;grid-template-columns:1fr auto;gap:4px 12px;background:var(--surface);border-radius:12px;box-shadow:var(--shadow);padding:12px 14px;margin-block:8px;cursor:pointer;border:1px solid transparent;text-align:left;width:100%;font:inherit;color:inherit}
+.rec:hover{border-color:var(--line)}
+.rec .who{font-size:17px;font-weight:700}
+.rec .yen{justify-self:end;font-size:15px;font-weight:700}
+.rec .items{grid-column:1/-1;font-size:13px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pill{justify-self:end;align-self:start;font-size:12px;font-weight:700;border-radius:999px;padding:2px 10px;white-space:nowrap}
+.pill.ok{background:var(--ok-soft);color:var(--ok)}
+.pill.warn{background:var(--warn-soft);color:var(--warn)}
+.pill.sample{background:var(--accent-soft);color:var(--accent)}
+.empty{color:var(--muted);text-align:center;padding-block:20px;font-size:14px}
+
+.sheet{background:var(--surface);border-radius:14px;box-shadow:var(--shadow);padding:18px 16px;margin-block:12px}
+.sheet h2{font-size:22px}
+.meta{color:var(--muted);font-size:13px}
+.kv{display:grid;grid-template-columns:6.5em 1fr;gap:8px 12px;margin-block:14px;font-size:15px}
+.kv dt{color:var(--muted);font-size:13px;font-weight:700;padding-top:2px}
+.kv dd{margin:0;white-space:pre-wrap;word-break:break-word}
+.bigtime{font-size:26px;font-weight:700;color:var(--accent)}
+.detailbar{display:flex;flex-wrap:wrap;gap:8px;margin-block:12px}
+.back{border:0;background:none;color:var(--accent);font:inherit;font-weight:700;padding:8px 0;cursor:pointer}
+
+.set3{display:grid;grid-template-columns:1fr 1fr 1.2fr;gap:8px}
+.note{margin:0;font-size:13px;color:var(--muted)}
+.about{font-size:14px;line-height:1.75}
+.about h3{font-size:14px;margin:12px 0 2px}
+.about p,.about ul{margin:0}
+.about ul{padding-left:1.2em}
+
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--ground);padding:10px 18px;border-radius:999px;font-size:14px;font-weight:700;z-index:20;max-width:calc(100% - 32px);text-align:center}
+@media (prefers-reduced-motion:no-preference){.toast{animation:up .2s ease-out}@keyframes up{from{transform:translate(-50%,8px);opacity:0}}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1>自費サービス記録帳</h1>
+    <nav class="tabs" role="tablist">
+      <button id="tabList" role="tab" aria-selected="true">一覧</button>
+      <button id="tabNew" role="tab" aria-selected="false">＋記録</button>
+      <button id="tabSet" role="tab" aria-selected="false">設定</button>
+    </nav>
+  </header>
+
+  <div id="installBanner" class="banner" hidden>
+    <div><b>ホーム画面に追加</b>してから使ってください。アプリのように開けて、記録も消えにくくなります。</div>
+    <div id="installHowIos" class="note" hidden>iPhone：Safariの下にある共有ボタン（□に↑）→「ホーム画面に追加」</div>
+    <div id="installHowOther" class="note" hidden>Android：右上の「︙」→「ホーム画面に追加」または「アプリをインストール」</div>
+    <div class="row">
+      <button id="installLater" class="btn small ghost">あとで</button>
+      <button id="installBtn" class="btn small primary" hidden>ホーム画面に追加</button>
+    </div>
+  </div>
+  <div id="backupBanner" class="banner warn" hidden>
+    <div id="backupText"></div>
+    <div class="row"><button id="backupNow" class="btn small primary">いまバックアップ</button></div>
+  </div>
+  <div id="dbError" class="banner warn" hidden><div><b>この画面では記録を保存できません。</b>プライベートブラウズを使っている場合は、通常の画面で開き直してください。</div></div>
+
+  <!-- 一覧 -->
+  <main id="viewList">
+    <div class="filters">
+      <select id="fClient" aria-label="利用者でしぼる"><option value="">全員</option></select>
+      <input id="fMonth" type="month" aria-label="月でしぼる">
+    </div>
+    <div class="summary">
+      <span id="sumText" class="num"></span>
+      <button id="csvBtn" class="btn small ghost" hidden>CSVで保存</button>
+    </div>
+    <div id="list"></div>
+  </main>
+
+  <!-- 入力 -->
+  <main id="viewForm" hidden>
+    <form id="form" autocomplete="off">
+      <section class="section">
+        <h2>だれに・だれが</h2>
+        <label class="f">利用者名
+          <input id="client" type="text" list="clientList" placeholder="例）山田 花子 様">
+          <datalist id="clientList"></datalist>
+        </label>
+        <label class="f">担当者
+          <input id="staff" type="text" placeholder="例）佐藤">
+        </label>
+      </section>
+
+      <section class="section">
+        <h2>いつ</h2>
+        <label class="f">利用日<input id="date" type="date"></label>
+        <div class="timebox">
+          <div class="tcol">
+            <label class="f">開始<input id="start" type="time"></label>
+            <button type="button" class="nowbtn" data-now="start">今の時刻</button>
+          </div>
+          <div class="tilde">〜</div>
+          <div class="tcol">
+            <label class="f">終了<input id="end" type="time"></label>
+            <button type="button" class="nowbtn" data-now="end">今の時刻</button>
+          </div>
+        </div>
+        <div class="dur"><span>利用時間</span><b id="durText" class="num">—</b></div>
+        <div class="dur fee"><span>料金</span><div><b id="feeText" class="num">—</b><em id="feeHow" class="num"></em></div></div>
+      </section>
+
+      <section class="section">
+        <h2>なにをした</h2>
+        <div class="chips" id="items"></div>
+        <label class="f">実施内容（くわしく）
+          <textarea id="detail" placeholder="例）○○病院へ通院付き添い。受付〜会計まで同行し、処方薬を薬局で受け取り。帰宅後、服薬カレンダーにセット。"></textarea>
+        </label>
+        <label class="f">ご本人の様子・特記事項
+          <textarea id="note" placeholder="例）待ち時間に少し疲れた様子。帰宅後は水分をとって休まれた。"></textarea>
+        </label>
+      </section>
+
+      <section class="section" id="sigSection">
+        <h2>利用者サイン</h2>
+        <div class="row2">
+          <label class="f">署名した人
+            <select id="signer"><option>ご本人</option><option>ご家族</option><option>代筆</option></select>
+          </label>
+          <label class="f" id="signerNameWrap" hidden>氏名・続柄
+            <input id="signerName" type="text" placeholder="例）長女 山田 恵">
+          </label>
+        </div>
+        <div class="sigpad" id="pad">
+          <div class="base"></div><div class="x">×</div>
+          <div class="hint" id="padHint">ここに指でサインしてください</div>
+          <canvas id="canvas"></canvas>
+        </div>
+        <div class="sigtools">
+          <span>上の内容を確認してからサインしてもらいます</span>
+          <button type="button" id="sigClear" class="btn small">書き直す</button>
+        </div>
+      </section>
+
+      <div class="actions">
+        <button type="button" id="saveDraft" class="btn">サインなしで保存</button>
+        <button type="submit" id="saveSigned" class="btn primary">サインして保存</button>
+      </div>
+      <button type="button" id="cancelEdit" class="btn ghost wide">やめる</button>
+    </form>
+  </main>
+
+  <!-- 詳細 -->
+  <main id="viewDetail" hidden></main>
+
+  <!-- 設定 -->
+  <main id="viewSet" hidden>
+    <section class="section">
+      <h2>料金</h2>
+      <div class="set3">
+        <label class="f">何分ごと<input id="sUnit" type="number" inputmode="numeric" min="1" step="1"></label>
+        <label class="f">金額（円）<input id="sPrice" type="number" inputmode="numeric" min="0" step="10"></label>
+        <label class="f">半端な時間
+          <select id="sRound"><option value="floor">切り捨て</option><option value="ceil">切り上げ</option></select>
+        </label>
+      </div>
+      <p class="note" id="feeExample"></p>
+      <p class="note">変えた設定は<b>これから保存する記録</b>に使われます。保存済みの記録の料金は変わりません。</p>
+      <button type="button" id="sSave" class="btn primary">この料金にする</button>
+    </section>
+
+    <section class="section">
+      <h2>バックアップ</h2>
+      <p class="note">記録は<b>このスマホの中だけ</b>にあります。スマホをなくしたり機種変更したりすると消えるので、ときどきバックアップを保存してください。保存先に「ドライブ」などを選べば、ご自分のGoogleドライブやiCloudに残せます。</p>
+      <p class="note num" id="backupInfo"></p>
+      <button type="button" id="backupBtn" class="btn primary">バックアップを保存</button>
+      <label class="btn wide" style="text-align:center">バックアップから戻す
+        <input id="restoreFile" type="file" accept=".txt,.json,text/plain,application/json" hidden>
+      </label>
+      <p class="note">戻すと、バックアップの中の記録がこのスマホに追加されます。同じ記録があるときは新しいほうを残します。</p>
+    </section>
+
+    <section class="section about">
+      <h2>このアプリについて</h2>
+      <h3>無料・無保証です</h3>
+      <p>だれでも無料で使えます。問い合わせ窓口やサポートはありません。使ったことで起きた損害（記録が消えた、計算を間違えた など）について、作者は責任を負いません。</p>
+      <h3>記録はどこにも送られません</h3>
+      <p>入力した記録・サインは、このスマホのブラウザの中にだけ保存されます。作者を含め、ほかのだれにも届きません。ログインもアクセス解析もありません。</p>
+      <h3>気をつけてほしいこと</h3>
+      <ul>
+        <li>利用者の個人情報を扱うので、スマホには画面ロックをかけてください。</li>
+        <li>手書きサインは「利用者が内容を確認した」ことの記録です。本人確認や契約書の代わりにはなりません。</li>
+        <li>介護保険サービスの正式な記録として使う場合は、事業所ごとに保存方法の決まりを確認してください。</li>
+        <li>バックアップは各自で保存してください。</li>
+      </ul>
+      <h3>自由に使ってください</h3>
+      <p>MITライセンスで公開しています。使う・改変する・配るのは自由です。</p>
+    </section>
+
+    <section class="section">
+      <h2>このスマホの記録を消す</h2>
+      <p class="note">スマホを手放すときなどに使います。消した記録は戻せません（バックアップがあれば戻せます）。</p>
+      <button type="button" id="wipeBtn" class="btn danger wide" style="border-color:var(--line)">すべての記録を消す</button>
+    </section>
+  </main>
+</div>
+<div id="toast" class="toast" role="status" hidden></div>
+
+<script>
+(() => {
+"use strict";
+const ITEMS = ["通院付き添い","買い物同行","買い物代行","外出付き添い","掃除","大掃除・片付け","調理","洗濯","見守り・話し相手","服薬確認","入浴介助","草取り・庭","その他"];
+const DEFAULT_FEE = {unit:5, price:500, round:"floor"};
+const BACKUP_DAYS = 30;
+const $ = id => document.getElementById(id);
+
+/* ============ 保存（IndexedDB：このスマホの中だけ） ============ */
+const store = (() => {
+  let dbp = null;
+  function open(){
+    if(dbp) return dbp;
+    dbp = new Promise((res, rej) => {
+      if(!("indexedDB" in window)) return rej(new Error("no indexedDB"));
+      const q = indexedDB.open("jihi-kiroku", 1);
+      q.onupgradeneeded = () => { const d=q.result; d.createObjectStore("records",{keyPath:"id"}); d.createObjectStore("meta"); };
+      q.onsuccess = () => res(q.result);
+      q.onerror = () => rej(q.error);
+    });
+    return dbp;
+  }
+  async function run(name, mode, fn){
+    const d = await open();
+    return new Promise((res, rej) => {
+      const t = d.transaction(name, mode); const r = fn(t.objectStore(name));
+      t.oncomplete = () => res(r && "result" in r ? r.result : undefined);
+      t.onerror = () => rej(t.error); t.onabort = () => rej(t.error);
+    });
+  }
+  return {
+    all: () => run("records","readonly", s => s.getAll()),
+    put: rec => run("records","readwrite", s => s.put(rec)),
+    putMany: recs => run("records","readwrite", s => { recs.forEach(r=>s.put(r)); }),
+    del: id => run("records","readwrite", s => s.delete(id)),
+    clear: () => run("records","readwrite", s => s.clear()),
+    get: key => run("meta","readonly", s => s.get(key)),
+    set: (key, val) => run("meta","readwrite", s => s.put(val, key)),
+  };
+})();
+
+let records = [];
+let fee = {...DEFAULT_FEE};
+let meta = {staff:"", lastBackupAt:null, installDismissed:false, backupCountAt:0};
+let editingId = null, currentDetail = null;
+
+/* ============ 共通 ============ */
+const pad2 = n => String(n).padStart(2,"0");
+function today(){ const d=new Date(); return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`; }
+function nowTime(){ const d=new Date(); return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`; }
+function minutes(s,e){ if(!s||!e) return null; const [a,b]=s.split(":").map(Number),[c,d]=e.split(":").map(Number); let m=(c*60+d)-(a*60+b); if(m<0) m+=1440; return m; }
+function fmtDur(m){ if(m==null) return "—"; const h=Math.floor(m/60), r=m%60; return h ? (r?`${h}時間${r}分`:`${h}時間`) : `${r}分`; }
+function fmtDate(s){ if(!s) return ""; const [y,m,d]=s.split("-").map(Number); return `${y}年${m}月${d}日（${"日月火水木金土"[new Date(y,m-1,d).getDay()]}）`; }
+function fmtStamp(iso){ if(!iso) return ""; const d=new Date(iso); return `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`; }
+function esc(s){ return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function newId(){ return (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36)+Math.random().toString(36).slice(2,10)); }
+function calcFee(m,f=fee){ if(m==null) return null; const u=m/f.unit; return (f.round==="ceil"?Math.ceil(u-1e-9):Math.floor(u+1e-9))*f.price; }
+function feeOf(r){ return typeof r.fee==="number" ? r.fee : calcFee(minutes(r.start,r.end)); }
+const yen = n => n==null ? "—" : n.toLocaleString("ja-JP")+"円";
+function feeLabel(f=fee){ return `${f.unit}分ごと${yen(f.price)}（1時間 ${yen(Math.round(60/f.unit)*f.price)}）・${f.round==="ceil"?"切り上げ":"切り捨て"}`; }
+let toastT; function toast(msg){ const t=$("toast"); t.textContent=msg; t.hidden=false; clearTimeout(toastT); toastT=setTimeout(()=>t.hidden=true,2800); }
+async function saveMeta(patch){ Object.assign(meta,patch); try{ await store.set("meta",meta); }catch{} }
+
+/* ファイルを渡す：共有メニュー（ドライブ等を選べる）→ だめならダウンロード */
+async function handOver(filename, blob){
+  const file = new File([blob], filename, {type: blob.type});
+  if(navigator.canShare && navigator.canShare({files:[file]})){
+    try{ await navigator.share({files:[file]}); return true; }
+    catch(e){ if(e && e.name==="AbortError") return false; }
+  }
+  const url = URL.createObjectURL(blob), a = document.createElement("a");
+  a.href=url; a.download=filename; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 15000);
+  return true;
+}
+
+/* ============ 画面切り替え ============ */
+function show(view){
+  for(const v of ["List","Form","Detail","Set"]) $("view"+v).hidden = view!==v.toLowerCase();
+  $("tabList").setAttribute("aria-selected", String(view==="list"||view==="detail"));
+  $("tabNew").setAttribute("aria-selected", String(view==="form"));
+  $("tabSet").setAttribute("aria-selected", String(view==="set"));
+  window.scrollTo(0,0);
+}
+$("tabList").onclick = () => { currentDetail=null; show("list"); };
+$("tabNew").onclick = () => openForm(null);
+$("tabSet").onclick = () => { renderSettings(); show("set"); };
+
+/* ============ 一覧 ============ */
+const SAMPLE = {id:"__sample", sample:true, client:"山田 花子 様（見本）", staff:"佐藤", date:today(), start:"09:30", end:"11:45",
+  items:["通院付き添い","服薬確認"], detail:"○○内科へ通院付き添い。受付から会計まで同行し、処方薬を薬局で受け取り。帰宅後、服薬カレンダーにセット。",
+  note:"待ち時間に少し疲れた様子。帰宅後は水分をとって休まれた。", signer:"ご本人", signerName:"", sig:null, signedAt:null};
+
+const sorted = () => [...records].sort((a,b)=>(b.date+b.start).localeCompare(a.date+a.start));
+function filtered(){
+  let rows = sorted(); const who=$("fClient").value, month=$("fMonth").value;
+  if(who) rows=rows.filter(r=>r.client===who);
+  if(month) rows=rows.filter(r=>(r.date||"").startsWith(month));
+  return rows;
+}
+function render(){
+  const clients=[...new Set(records.map(r=>r.client).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"ja"));
+  const fc=$("fClient"), cur=fc.value;
+  fc.innerHTML='<option value="">全員</option>'+clients.map(c=>`<option>${esc(c)}</option>`).join("");
+  fc.value = clients.includes(cur) ? cur : "";
+  $("clientList").innerHTML = clients.map(c=>`<option value="${esc(c)}">`).join("");
+
+  const rows=filtered(), list=$("list");
+  $("csvBtn").hidden = !rows.length;
+  if(!records.length){
+    $("sumText").textContent="まだ記録がありません。下は見本です。";
+    list.innerHTML = groupHtml([SAMPLE]) + `<p class="empty">右上の「＋記録」から最初の記録をつけましょう</p>`;
+  } else if(!rows.length){
+    $("sumText").textContent="0件"; list.innerHTML=`<p class="empty">この条件の記録はありません</p>`;
+  } else {
+    const total=rows.reduce((s,r)=>s+(minutes(r.start,r.end)||0),0), totalYen=rows.reduce((s,r)=>s+(feeOf(r)||0),0), uns=rows.filter(r=>!r.sig).length;
+    $("sumText").textContent=`${rows.length}件・${fmtDur(total)}・${yen(totalYen)}`+(uns?`・サイン待ち${uns}件`:"");
+    list.innerHTML = groupHtml(rows);
+  }
+  list.querySelectorAll(".rec").forEach(el => el.onclick = () => {
+    const r = el.dataset.id==="__sample" ? SAMPLE : records.find(x=>x.id===el.dataset.id);
+    if(r) openDetail(r);
+  });
+  renderBackupBanner();
+}
+function groupHtml(rows){
+  let html="", last="";
+  for(const r of rows){
+    if(r.date!==last){ html+=`<div class="daygroup">${esc(fmtDate(r.date))}</div>`; last=r.date; }
+    const pill = r.sample ? `<span class="pill sample">見本</span>` : r.sig ? `<span class="pill ok">サイン済</span>` : `<span class="pill warn">サイン待ち</span>`;
+    html+=`<button class="rec" data-id="${esc(r.id)}">
+      <span class="who">${esc(r.client)}</span>${pill}
+      <span class="num">${esc(r.start)}〜${esc(r.end)}　<span class="meta">${fmtDur(minutes(r.start,r.end))}</span></span><span class="yen num">${yen(feeOf(r))}</span>
+      <span class="items">${esc((r.items||[]).join("・")||r.detail||"")}</span>
+    </button>`;
+  }
+  return html;
+}
+$("fClient").onchange = render; $("fMonth").onchange = render;
+
+/* ============ 詳細 ============ */
+function signerLabel(r){ return r.signer + (r.signerName?`（${r.signerName}）`:""); }
+function openDetail(r){
+  currentDetail = r;
+  $("viewDetail").innerHTML = `
+    <button class="back" id="dBack">← 一覧へ</button>
+    <article class="sheet">
+      <div class="meta">${esc(fmtDate(r.date))}${r.sample?"　※見本です（保存されていません）":""}</div>
+      <h2>${esc(r.client)}</h2>
+      <div class="bigtime num">${esc(r.start)} 〜 ${esc(r.end)}</div>
+      <div class="meta num">利用時間 ${fmtDur(minutes(r.start,r.end))}　料金 <b style="color:var(--ink);font-size:17px">${yen(feeOf(r))}</b></div>
+      <dl class="kv">
+        <dt>担当者</dt><dd>${esc(r.staff||"—")}</dd>
+        <dt>料金の計算</dt><dd class="num">${r.feeUnit?esc(feeLabel({unit:r.feeUnit,price:r.feePrice,round:r.feeRound})):"いまの料金設定で計算"}</dd>
+        <dt>サービス</dt><dd>${esc((r.items||[]).join("、")||"—")}</dd>
+        <dt>実施内容</dt><dd>${esc(r.detail||"—")}</dd>
+        <dt>様子・特記</dt><dd>${esc(r.note||"—")}</dd>
+        <dt>サイン</dt><dd>${r.sig?`${esc(signerLabel(r))}<br><span class="meta">${esc(fmtStamp(r.signedAt))} 署名</span>`:`<span style="color:var(--warn);font-weight:700">まだです</span>`}</dd>
+      </dl>
+      ${r.sig?`<div class="sigimg"><img src="${r.sig}" alt="サイン"></div>`:""}
+    </article>
+    ${r.sample?"":`<div class="detailbar">
+      ${r.sig?"":`<button class="btn primary" id="dSign" style="flex:1 1 100%">サインをもらう</button>`}
+      <button class="btn" id="dPng">記録票を画像で保存</button>
+      <button class="btn" id="dEdit">内容を修正</button>
+      <button class="btn danger" id="dDel">削除</button>
+    </div>`}`;
+  $("dBack").onclick = () => { currentDetail=null; show("list"); };
+  if(!r.sample){
+    if($("dSign")) $("dSign").onclick = () => openForm(r, {focusSig:true});
+    $("dEdit").onclick = () => {
+      if(r.sig && !confirm("サイン済みの記録です。修正するとサインは消え、もう一度サインをもらう必要があります。修正しますか？")) return;
+      openForm(r);
+    };
+    $("dDel").onclick = async () => {
+      if(!confirm(`${r.client}　${fmtDate(r.date)} の記録を削除します。元に戻せません。`)) return;
+      try{ await store.del(r.id); records=records.filter(x=>x.id!==r.id); render(); currentDetail=null; show("list"); toast("削除しました"); }
+      catch{ toast("削除できませんでした"); }
+    };
+    $("dPng").onclick = () => savePng(r);
+  }
+  show("detail");
+}
+
+/* ============ 入力 ============ */
+$("items").innerHTML = ITEMS.map((t,i)=>`<label class="chip"><input type="checkbox" id="it${i}" value="${esc(t)}"><span>${esc(t)}</span></label>`).join("");
+document.querySelectorAll("[data-now]").forEach(b => b.onclick = () => { $(b.dataset.now).value=nowTime(); updDur(); });
+$("start").oninput = $("end").oninput = updDur;
+function updDur(){ const m=minutes($("start").value,$("end").value); $("durText").textContent=fmtDur(m); $("feeText").textContent=yen(calcFee(m)); $("feeHow").textContent=feeLabel(); }
+$("signer").onchange = () => { $("signerNameWrap").hidden = $("signer").value==="ご本人"; };
+$("cancelEdit").onclick = () => { const r=editingId && records.find(x=>x.id===editingId); editingId=null; r ? openDetail(r) : show("list"); };
+
+function openForm(r, opt={}){
+  editingId = r ? r.id : null;
+  $("form").reset();
+  $("client").value = r?.client || $("fClient").value || "";
+  $("staff").value = r?.staff ?? meta.staff ?? "";
+  $("date").value = r?.date || today();
+  $("start").value = r?.start || ""; $("end").value = r?.end || "";
+  document.querySelectorAll("#items input").forEach(c => c.checked = !!r?.items?.includes(c.value));
+  $("detail").value = r?.detail || ""; $("note").value = r?.note || "";
+  $("signer").value = r?.signer || "ご本人"; $("signerName").value = r?.signerName || "";
+  $("signer").onchange(); updDur(); show("form");
+  requestAnimationFrame(() => { sizeCanvas(); clearPad(); if(opt.focusSig) $("sigSection").scrollIntoView({behavior:"smooth",block:"start"}); });
+}
+function collect(){
+  const client=$("client").value.trim(), date=$("date").value, start=$("start").value, end=$("end").value;
+  if(!client){ toast("利用者名を入れてください"); $("client").focus(); return null; }
+  if(!date||!start||!end){ toast("利用日と、開始・終了の時刻を入れてください"); return null; }
+  const prev = editingId ? records.find(x=>x.id===editingId) : null, m = minutes(start,end);
+  return {
+    id: editingId || newId(), client, staff:$("staff").value.trim(), date, start, end, minutes:m,
+    fee: calcFee(m), feeUnit: fee.unit, feePrice: fee.price, feeRound: fee.round,
+    items: [...document.querySelectorAll("#items input:checked")].map(c=>c.value),
+    detail: $("detail").value.trim(), note: $("note").value.trim(),
+    signer: $("signer").value, signerName: $("signer").value==="ご本人" ? "" : $("signerName").value.trim(),
+    sig:null, signedAt:null, createdAt: prev?.createdAt || new Date().toISOString(), updatedAt: new Date().toISOString()
+  };
+}
+async function doSave(withSig){
+  const rec = collect(); if(!rec) return;
+  if(withSig){
+    if(!hasInk){ toast("サイン欄にサインがありません"); $("sigSection").scrollIntoView({behavior:"smooth"}); return; }
+    rec.sig = exportSig(); rec.signedAt = new Date().toISOString();
+  }
+  const btns=[$("saveDraft"),$("saveSigned")]; btns.forEach(b=>b.disabled=true);
+  try{
+    await store.put(rec);
+    const i=records.findIndex(x=>x.id===rec.id); if(i>=0) records[i]=rec; else records.push(rec);
+    if(rec.staff!==meta.staff) saveMeta({staff:rec.staff});
+    if(records.length===1 && navigator.storage?.persist) navigator.storage.persist().catch(()=>{});
+    editingId=null; render(); openDetail(rec);
+    toast(withSig ? "サイン付きで保存しました" : "保存しました（サイン待ち）");
+  }catch(e){
+    toast(e && e.name==="QuotaExceededError" ? "スマホの空き容量が足りません" : "保存できませんでした");
+  }finally{ btns.forEach(b=>b.disabled=false); }
+}
+$("form").onsubmit = e => { e.preventDefault(); doSave(true); };
+$("saveDraft").onclick = () => doSave(false);
+
+/* ============ サイン欄 ============ */
+const canvas=$("canvas"), ctx=canvas.getContext("2d");
+let drawing=false, hasInk=false, last=null, dpr=1;
+function sizeCanvas(){
+  const r=canvas.getBoundingClientRect(); if(!r.width) return;
+  dpr=Math.max(1,Math.min(3,window.devicePixelRatio||1));
+  const w=Math.round(r.width*dpr), h=Math.round(r.height*dpr);
+  if(canvas.width===w && canvas.height===h) return;
+  const keep = hasInk ? canvas.toDataURL() : null;
+  canvas.width=w; canvas.height=h;
+  if(keep){ const im=new Image(); im.onload=()=>ctx.drawImage(im,0,0,w,h); im.src=keep; }
+}
+function clearPad(){ ctx.clearRect(0,0,canvas.width,canvas.height); hasInk=false; $("padHint").hidden=false; }
+function pt(e){ const r=canvas.getBoundingClientRect(); return {x:(e.clientX-r.left)*dpr, y:(e.clientY-r.top)*dpr, p:e.pressure||.5}; }
+canvas.addEventListener("pointerdown", e => {
+  e.preventDefault(); canvas.setPointerCapture(e.pointerId); drawing=true; last=pt(e);
+  ctx.fillStyle="#14244A"; ctx.beginPath(); ctx.arc(last.x,last.y,1.4*dpr,0,Math.PI*2); ctx.fill();
+  hasInk=true; $("padHint").hidden=true;
+});
+canvas.addEventListener("pointermove", e => {
+  if(!drawing) return; e.preventDefault();
+  for(const ev of (e.getCoalescedEvents ? e.getCoalescedEvents() : [e])){
+    const p=pt(ev);
+    ctx.strokeStyle="#14244A"; ctx.lineWidth=(e.pointerType==="pen" ? 1.2+p.p*2.4 : 2.8)*dpr; ctx.lineCap="round"; ctx.lineJoin="round";
+    ctx.beginPath(); ctx.moveTo(last.x,last.y); ctx.lineTo(p.x,p.y); ctx.stroke(); last=p;
+  }
+});
+["pointerup","pointercancel"].forEach(t => canvas.addEventListener(t, () => { drawing=false; }));
+$("sigClear").onclick = clearPad;
+window.addEventListener("resize", () => { if(!$("viewForm").hidden) sizeCanvas(); });
+function exportSig(){
+  const W=canvas.width, H=canvas.height, d=ctx.getImageData(0,0,W,H).data;
+  let x0=W,y0=H,x1=0,y1=0;
+  for(let y=0;y<H;y+=2) for(let x=0;x<W;x+=2) if(d[(y*W+x)*4+3]>0){ if(x<x0)x0=x; if(x>x1)x1=x; if(y<y0)y0=y; if(y>y1)y1=y; }
+  const m=12*dpr; x0=Math.max(0,x0-m); y0=Math.max(0,y0-m); x1=Math.min(W,x1+m); y1=Math.min(H,y1+m);
+  const sw=x1-x0, sh=y1-y0, sc=Math.min(1,600/sw), out=document.createElement("canvas");
+  out.width=Math.round(sw*sc); out.height=Math.round(sh*sc);
+  out.getContext("2d").drawImage(canvas,x0,y0,sw,sh,0,0,out.width,out.height);
+  return out.toDataURL("image/png");
+}
+
+/* ============ CSV・記録票画像 ============ */
+$("csvBtn").onclick = async () => {
+  const rows=filtered().reverse(), q=v=>`"${String(v??"").replace(/"/g,'""')}"`;
+  const head=["利用日","利用者","開始","終了","分","料金","担当者","サービス","実施内容","様子・特記","署名者","署名日時"];
+  const lines=[head.map(q).join(",")].concat(rows.map(r=>[r.date,r.client,r.start,r.end,minutes(r.start,r.end),feeOf(r),r.staff,(r.items||[]).join("・"),r.detail,r.note,r.sig?signerLabel(r):"未署名",fmtStamp(r.signedAt)].map(q).join(",")));
+  const name=`自費記録_${($("fClient").value||"全員").replace(/[\\/:*?"<>|\s]/g,"")}_${$("fMonth").value||"全期間"}.csv`;
+  await handOver(name, new Blob(["﻿"+lines.join("\r\n")], {type:"text/csv"}));
+};
+async function savePng(r){
+  const W=1080, P=72, c=document.createElement("canvas"), g=c.getContext("2d");
+  const FF='"Hiragino Sans","BIZ UDPGothic","Yu Gothic","Noto Sans JP",sans-serif';
+  const font=(s,b)=>`${b?"700 ":""}${s}px ${FF}`;
+  const wrap=(text,x,y,maxW,lh,draw)=>{
+    for(const para of String(text||"—").split("\n")){
+      let line="";
+      for(const ch of para){ if(g.measureText(line+ch).width>maxW && line){ if(draw) g.fillText(line,x,y); y+=lh; line=ch; } else line+=ch; }
+      if(draw) g.fillText(line,x,y); y+=lh;
+    }
+    return y;
+  };
+  const img = r.sig ? await new Promise(res=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=()=>res(null); i.src=r.sig; }) : null;
+  const fields=[["担当者",r.staff||"—"],["サービス",(r.items||[]).join("、")||"—"],["実施内容",r.detail],["様子・特記",r.note],["署名",r.sig?`${signerLabel(r)}　${fmtStamp(r.signedAt)}`:"未署名"]];
+  const layout = draw => {
+    let y=P+40;
+    if(draw){ g.fillStyle="#1B2433"; g.font=font(30,true); g.fillText("自費サービス提供記録",P,y); }
+    y+=60; if(draw){ g.font=font(24); g.fillStyle="#5E6878"; g.fillText(fmtDate(r.date),P,y); }
+    y+=58; if(draw){ g.font=font(44,true); g.fillStyle="#1B2433"; g.fillText(r.client,P,y); }
+    y+=64; if(draw){ g.font=font(36,true); g.fillStyle="#2C4A7E"; g.fillText(`${r.start} 〜 ${r.end}（${fmtDur(minutes(r.start,r.end))}）${yen(feeOf(r))}`,P,y); }
+    y+=40;
+    for(const [k,v] of fields){
+      y+=22; if(draw){ g.strokeStyle="#D5DBE3"; g.lineWidth=2; g.beginPath(); g.moveTo(P,y); g.lineTo(W-P,y); g.stroke(); }
+      y+=40; g.font=font(22,true); if(draw){ g.fillStyle="#5E6878"; g.fillText(k,P,y); }
+      g.font=font(26); g.fillStyle="#1B2433"; y=wrap(v,P+170,y,W-P*2-170,40,draw)-18;
+    }
+    y+=40;
+    if(img){
+      const bw=W-P*2, iw=Math.min(bw-40,img.width*1.3), ih=iw*img.height/img.width;
+      if(draw){ g.strokeStyle="#B9C2CF"; g.setLineDash([10,8]); g.strokeRect(P,y,bw,ih+40); g.setLineDash([]); g.drawImage(img,P+20,y+20,iw,ih); }
+      y+=ih+40;
+    }
+    return y+P;
+  };
+  c.width=W; c.height=10; const H=layout(false);
+  c.height=Math.ceil(H); g.fillStyle="#FFFFFF"; g.fillRect(0,0,W,c.height); layout(true);
+  const blob=await new Promise(res=>c.toBlob(res,"image/png"));
+  await handOver(`記録票_${r.client.replace(/[\\/:*?"<>|\s]/g,"")}_${r.date}.png`, blob);
+}
+
+/* ============ 設定・バックアップ ============ */
+function renderSettings(){
+  $("sUnit").value=fee.unit; $("sPrice").value=fee.price; $("sRound").value=fee.round;
+  $("feeExample").textContent = `いま：${feeLabel()}。62分なら ${yen(calcFee(62))}。`;
+  $("backupInfo").textContent = meta.lastBackupAt ? `前回のバックアップ：${fmtStamp(meta.lastBackupAt)}（記録${records.length}件）` : `まだバックアップしていません（記録${records.length}件）`;
+}
+$("sSave").onclick = async () => {
+  const unit=Math.round(Number($("sUnit").value)), price=Math.round(Number($("sPrice").value)), round=$("sRound").value;
+  if(!(unit>=1) || !(price>=0)){ toast("何分ごと・金額を正しく入れてください"); return; }
+  fee={unit,price,round};
+  try{ await store.set("fee",fee); }catch{}
+  renderSettings(); render(); toast("料金を変えました");
+};
+function renderBackupBanner(){
+  const n=records.length; let msg="";
+  if(n>=3 && !meta.lastBackupAt) msg=`記録が${n}件になりました。スマホをなくすと消えてしまうので、<b>バックアップ</b>を保存しておきましょう。`;
+  else if(meta.lastBackupAt){
+    const days=Math.floor((Date.now()-new Date(meta.lastBackupAt))/864e5), added=n-(meta.backupCountAt||0);
+    if(added>0 && days>=BACKUP_DAYS) msg=`前回のバックアップから<b>${days}日</b>たちました（その後の記録${added}件）。`;
+  }
+  $("backupText").innerHTML=msg; $("backupBanner").hidden=!msg;
+}
+async function doBackup(){
+  const data={app:"jihi-kiroku", format:1, exportedAt:new Date().toISOString(), fee, records};
+  const blob=new Blob([JSON.stringify(data)],{type:"text/plain"});
+  const ok=await handOver(`自費記録バックアップ_${today()}.txt`, blob);
+  if(ok){ await saveMeta({lastBackupAt:new Date().toISOString(), backupCountAt:records.length}); renderSettings(); renderBackupBanner(); toast("バックアップを保存しました"); }
+}
+$("backupBtn").onclick = doBackup; $("backupNow").onclick = doBackup;
+$("restoreFile").onchange = async e => {
+  const f=e.target.files[0]; e.target.value=""; if(!f) return;
+  let data; try{ data=JSON.parse(await f.text()); }catch{ data=null; }
+  if(!data || data.app!=="jihi-kiroku" || !Array.isArray(data.records)){ toast("このアプリのバックアップファイルではありません"); return; }
+  const byId=new Map(records.map(r=>[r.id,r])), incoming=data.records.filter(r=>r && r.id && r.date);
+  const toPut=incoming.filter(r=>{ const cur=byId.get(r.id); return !cur || (r.updatedAt||"")>(cur.updatedAt||""); });
+  if(!confirm(`バックアップ（${fmtStamp(data.exportedAt)}）の記録${incoming.length}件のうち、${toPut.length}件をこのスマホに追加・更新します。よろしいですか？`)) return;
+  try{
+    await store.putMany(toPut);
+    records = await store.all();
+    if(data.fee && !records.length){ fee={...DEFAULT_FEE,...data.fee}; await store.set("fee",fee); }
+    render(); renderSettings(); toast(`${toPut.length}件を戻しました`);
+  }catch{ toast("戻せませんでした。スマホの空き容量を確認してください"); }
+};
+$("wipeBtn").onclick = async () => {
+  if(!records.length){ toast("記録はありません"); return; }
+  if(!confirm(`このスマホの記録${records.length}件をすべて消します。バックアップがないと戻せません。`)) return;
+  if(!confirm("本当に消しますか？")) return;
+  try{ await store.clear(); records=[]; await saveMeta({lastBackupAt:null, backupCountAt:0}); render(); renderSettings(); toast("すべての記録を消しました"); }
+  catch{ toast("消せませんでした"); }
+};
+
+/* ============ ホーム画面に追加の案内 ============ */
+let deferredPrompt=null;
+const standalone = () => matchMedia("(display-mode: standalone)").matches || navigator.standalone===true;
+const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform==="MacIntel" && navigator.maxTouchPoints>1);
+function renderInstall(){
+  const showIt = !standalone() && !meta.installDismissed;
+  $("installBanner").hidden = !showIt;
+  $("installHowIos").hidden = !isIOS;
+  $("installHowOther").hidden = isIOS || !!deferredPrompt;
+  $("installBtn").hidden = !deferredPrompt;
+}
+window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); deferredPrompt=e; renderInstall(); });
+$("installBtn").onclick = async () => { if(!deferredPrompt) return; deferredPrompt.prompt(); await deferredPrompt.userChoice.catch(()=>{}); deferredPrompt=null; renderInstall(); };
+$("installLater").onclick = () => { saveMeta({installDismissed:true}); renderInstall(); };
+
+/* ============ 起動 ============ */
+render();
+(async () => {
+  try{
+    const [recs, f, m] = await Promise.all([store.all(), store.get("fee"), store.get("meta")]);
+    records = recs || []; if(f) fee = {...DEFAULT_FEE, ...f}; if(m) meta = {...meta, ...m};
+  }catch{ $("dbError").hidden=false; }
+  render(); renderInstall();
+})();
+if("serviceWorker" in navigator && location.protocol!=="file:"){
+  window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(()=>{}));
+}
+})();
+</script>
+</body>
+</html>
